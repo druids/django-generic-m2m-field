@@ -1,0 +1,20 @@
+language: python
+python:
+  - "3.5"
+  - "3.6"
+  - "3.7"
+
+env:
+  - DJANGO_VERSION=1.11
+  - DJANGO_VERSION=2.0
+  - DJANGO_VERSION=2.1
+  - DJANGO_VERSION=2.2
+
+install:
+  - cd example
+  - pip install -q Django==$DJANGO_VERSION
+  - pip install -r requirements.txt
+
+# command to run tests
+script:
+   coverage run --omit */site-packages/*,*/migrations/*,*/lib/* manage.py test apps.app.tests --settings=settings.settings -v 2
