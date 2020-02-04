@@ -23,7 +23,7 @@ INSTALLED_APPS = [
 
 Usage
 -----
-Imagine having an e-mail message log model where you need to relate more of different kinds of  objects to the message:
+Imagine having an e-mail message log model where you need to relate more of different kinds of objects to the message:
 
 ```python
 from django.db import models
