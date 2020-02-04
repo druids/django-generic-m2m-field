@@ -1,18 +1,18 @@
 Prolog
 ======
 
-`Django-generic-m2m-field` extends Django framework with `GenericManyToManyField`. The field is similar to standard `ManyToManyField` but uses Django `GenericForeignKey` to relate more different models.
+`Django-generic-m2m-field` extends the Django framework with a `GenericManyToManyField`. The field is similar to the standard `ManyToManyField` but uses Django's `GenericForeignKey` to relate to many different models.
 
 Installation
 ------------
 
-Install `django-generic-m2m-field` with pip:
+- Install `django-generic-m2m-field` with the `pip` command:
 
 ```bash
 pip install django-generic-m2m-field
 ```
 
-Add `'generic_m2m_field''` to your `INSTALLED_APPS`:
+- Add `'generic_m2m_field'` to your `INSTALLED_APPS`:
 
 ```python
 INSTALLED_APPS = [
@@ -21,7 +21,9 @@ INSTALLED_APPS = [
 ]
 ```
 
-Imagine having a e-mail message log model where you need to relate more different objects with the message:
+Usage
+-----
+Imagine having an e-mail message log model where you need to relate more of different kinds of objects to the message:
 
 ```python
 from django.db import models
@@ -37,7 +39,7 @@ class EmailMessage(models.Model):
 
 ```
 
-Now you can join your message instance with any instance of another model (for example customer):
+Now you can join your `EmailMessage` instance with any instance of any other model (User in this example):
 
 
 ```python
@@ -52,7 +54,7 @@ email_message.related_objects.add(user1)
 email_message.related_objects.add(user1, user2)
 
 # Remove user2
-email_message.related_objects.remove(user1, user2)
+email_message.related_objects.remove(user2)
 
 # Clear all relations
 email_message.related_objects.clear()
