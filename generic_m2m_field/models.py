@@ -63,6 +63,15 @@ class RelatedObjectQuerySet(SmartQuerySet):
     def get_object_pks(self, model_class):
         return self.annotate_object_pks(model_class).values_list('object_pk', flat=True)
 
+    def _filter_or_exclude(self, negate, *args, **kwargs):
+        if 'object' in kwargs:
+            object = kwargs.pop('object')
+            kwargs.update(dict(
+                object_id=object.pk,
+                object_ct=ContentType.objects.get_for_model(object),
+            ))
+        return super()._filter_or_exclude(negate, *args, **kwargs)
+
 
 class GenericManyToManyManager(models.Manager):
 
@@ -107,23 +116,45 @@ class GenericManyToMany(SmartModel):
 
 
 def create_generic_many_to_many_intermediary_model(field, klass):
-    from_ = camel_to_snake(klass.__name__).lower()
+    from_name = camel_to_snake(klass.__name__).lower()
 
     name = '{}GenericManyToManyRelation'.format(klass._meta.object_name)
     meta = type('Meta', (), {
         'app_label': klass._meta.app_label,
-        'unique_together': (from_, 'object_ct', 'object_id'),
+        'db_tablespace': klass._meta.db_tablespace,
+        'auto_created': klass,
+        'unique_together': (from_name, 'object_ct', 'object_id'),
         'apps': field.model._meta.apps,
     })
     return type(name, (GenericManyToMany,), {
         'Meta': meta,
         '__module__': klass.__module__,
-        from_: models.ForeignKey(
+        from_name: models.ForeignKey(
             klass,
             on_delete=models.CASCADE,
-            related_name=field.name
+            related_name='_{}'.format(field.name),
+            related_query_name=field.name
         ),
     })
+
+
+class GenericManyToManyFieldDescriptor:
+
+    def __init__(self, field):
+        self.field = field
+        self.through = field.through
+
+    def __set__(self, instance, value):
+        raise TypeError(
+            'Direct assignment to the %s is prohibited. Use %s.set() instead.'
+            % self._get_set_deprecation_msg_params(),
+        )
+
+    def __get__(self, instance, cls=None):
+        if instance is None:
+            return self
+
+        return getattr(instance, '_{}'.format(self.field.name))
 
 
 class GenericManyToManyField:
@@ -135,3 +166,4 @@ class GenericManyToManyField:
         self.model = cls
         self.name = name
         self.through = self.through or create_generic_many_to_many_intermediary_model(self, cls)
+        setattr(cls, name, GenericManyToManyFieldDescriptor(self))
