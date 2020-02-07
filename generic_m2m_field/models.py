@@ -122,7 +122,6 @@ def create_generic_many_to_many_intermediary_model(field, klass):
     meta = type('Meta', (), {
         'app_label': klass._meta.app_label,
         'db_tablespace': klass._meta.db_tablespace,
-        'auto_created': klass,
         'unique_together': (from_name, 'object_ct', 'object_id'),
         'apps': field.model._meta.apps,
     })
