@@ -27,7 +27,7 @@ Imagine having an e-mail message log model where you need to relate more of diff
 
 ```python
 from django.db import models
-from generic_m2m_field import GenericManyToManyField
+from generic_m2m_field.models import GenericManyToManyField
 
 
 class EmailMessage(models.Model):
@@ -67,5 +67,25 @@ email_message.related_objects.get_object_pks(User)
 
 # Get all related object pks of User model
 email_message.related_objects.get_objects(User)
+
+```
+
+Multiple DB
+-----------
+
+Django doesn't support foreign key for multiple databases. If you want to use generic m2m relation for models stored in different databases you can use ``MultipleDBGenericManyToManyField`` with the same way as GenericManyToManyField
+
+
+```python
+from django.db import models
+from generic_m2m_field.models import MultipleDBGenericManyToManyField
+
+
+class EmailMessage(models.Model):
+
+    recipient = models.EmailField(verbose_name=_('recipient'), blank=False, null=False)
+    sender = models.EmailField(verbose_name=_('sender'), blank=False, null=False)
+    subject = models.TextField(verbose_name=_('subject'), blank=False, null=False)
+    related_objects = MultipleDBGenericManyToManyField()
 
 ```

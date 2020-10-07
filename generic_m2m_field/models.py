@@ -6,6 +6,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models.functions import Cast
+from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
 from chamber.models import SmartModel, SmartQuerySet
@@ -19,7 +20,7 @@ def camel_to_snake(name):
 def add_objs(self, *objects):
     for obj in objects:
         self.get_or_create(
-            object_ct=ContentType.objects.get_for_model(obj),
+            object_ct_id=ContentType.objects.get_for_model(obj).pk,
             object_id=obj.pk
         )
 
@@ -32,7 +33,7 @@ def set_objs(self, *objects):
     self.clear()
     for obj in objects:
         self.create(
-            object_ct=ContentType.objects.get_for_model(obj),
+            object_ct_id=ContentType.objects.get_for_model(obj).pk,
             object_id=obj.pk
         )
 
@@ -40,7 +41,7 @@ def set_objs(self, *objects):
 def remove_objs(self, *objects):
     for obj in objects:
         self.filter(
-            object_ct=ContentType.objects.get_for_model(obj),
+            object_ct_id=ContentType.objects.get_for_model(obj).pk,
             object_id=obj.pk
         ).delete()
 
@@ -52,7 +53,7 @@ class RelatedObjectQuerySet(SmartQuerySet):
         if isinstance(pk_field, models.AutoField):
             pk_field = models.IntegerField()
         return self.filter(
-            object_ct=ContentType.objects.get_for_model(model_class)
+            object_ct_id=ContentType.objects.get_for_model(model_class).pk
         ).annotate(
             object_pk=Cast('object_id', output_field=pk_field)
         )
@@ -68,7 +69,7 @@ class RelatedObjectQuerySet(SmartQuerySet):
             object = kwargs.pop('object')
             kwargs.update(dict(
                 object_id=object.pk,
-                object_ct=ContentType.objects.get_for_model(object),
+                object_ct_id=ContentType.objects.get_for_model(object).pk,
             ))
         return super()._filter_or_exclude(negate, *args, **kwargs)
 
@@ -112,20 +113,50 @@ class GenericManyToMany(SmartModel):
 
     class Meta:
         abstract = True
-        ordering = ('-created_at',)
+        unique_together = ('object_ct', 'object_id')
 
 
-def create_generic_many_to_many_intermediary_model(field, klass):
+class MultipleDBGenericManyToMany(SmartModel):
+
+    object_ct_id = models.PositiveSmallIntegerField(
+        verbose_name=_('content type of the related object'),
+        null=False,
+        blank=False,
+        db_index=True
+    )
+    object_id = models.TextField(
+        verbose_name=_('ID of the related object'),
+        null=False,
+        blank=False,
+        db_index=True
+    )
+
+    class Meta:
+        abstract = True
+        unique_together = ('object_ct_id', 'object_id')
+
+    objects = GenericManyToManyManager.from_queryset(RelatedObjectQuerySet)()
+
+    @cached_property
+    def object_ct(self):
+        return ContentType.objects.get(pk=self.object_ct_id)
+
+    @cached_property
+    def object(self):
+        return self.object_ct.model_class().objects.get(pk=self.object_id)
+
+
+def create_generic_many_to_many_intermediary_model(field, klass, parent_through):
     from_name = camel_to_snake(klass.__name__).lower()
 
     name = '{}GenericManyToManyRelation'.format(klass._meta.object_name)
     meta = type('Meta', (), {
         'app_label': klass._meta.app_label,
         'db_tablespace': klass._meta.db_tablespace,
-        'unique_together': (from_name, 'object_ct', 'object_id'),
+        'unique_together': (from_name,) + parent_through.Meta.unique_together,
         'apps': field.model._meta.apps,
     })
-    return type(name, (GenericManyToMany,), {
+    return type(name, (parent_through,), {
         'Meta': meta,
         '__module__': klass.__module__,
         from_name: models.ForeignKey(
@@ -158,11 +189,18 @@ class GenericManyToManyFieldDescriptor:
 
 class GenericManyToManyField:
 
+    parent_through = GenericManyToMany
+
     def __init__(self, through=None):
         self.through = through
 
     def contribute_to_class(self, cls, name, **kwargs):
         self.model = cls
         self.name = name
-        self.through = self.through or create_generic_many_to_many_intermediary_model(self, cls)
+        self.through = self.through or create_generic_many_to_many_intermediary_model(self, cls, self.parent_through)
         setattr(cls, name, GenericManyToManyFieldDescriptor(self))
+
+
+class MultipleDBGenericManyToManyField(GenericManyToManyField):
+
+    parent_through = MultipleDBGenericManyToMany
