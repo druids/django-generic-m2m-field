@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-generic-m2m-field',
-    version='0.0.3',
+    version='0.0.4',
     description="Django generic many to many field library.",
     keywords='django, fields, generic',
     author='Lubos Matl',
