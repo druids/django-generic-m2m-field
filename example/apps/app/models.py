@@ -1,11 +1,16 @@
 from django.db import models
 
-from generic_m2m_field.models import GenericManyToManyField
+from generic_m2m_field.models import GenericManyToManyField, MultipleDBGenericManyToManyField
 
 
 class GenericManyToManyModel(models.Model):
 
     related_objects = GenericManyToManyField()
+
+
+class MultipleDBGenericManyToManyModel(models.Model):
+
+    related_objects = MultipleDBGenericManyToManyField()
 
 
 class OneRelatedObject(models.Model):
