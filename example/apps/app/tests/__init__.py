@@ -1,5 +1,7 @@
+from django.core.exceptions import MultipleObjectsReturned
+
 from germanium.test_cases.default import GermaniumTestCase
-from germanium.tools import assert_equal
+from germanium.tools import assert_equal, assert_is_none, assert_raises
 
 from apps.app.models import (
     GenericManyToManyModel, MultipleDBGenericManyToManyModel, OneRelatedObject, SecondRelatedObject
@@ -178,4 +180,24 @@ class GenericManyToManyTestCase(GermaniumTestCase):
         assert_equal(
             list(m2m_inst.related_objects.get_objects(OneRelatedObject)),
             [related_object_inst1, related_object_inst3]
+        )
+
+    def test_generic_m2m_manager_should_get_object_or_none_accroding_to_model_class(self):
+        m2m_inst = MultipleDBGenericManyToManyModel.objects.create()
+
+        assert_is_none(m2m_inst.related_objects.get_object_or_none(OneRelatedObject))
+
+        related_object_inst1 = OneRelatedObject.objects.create()
+        related_object_inst2 = SecondRelatedObject.objects.create(id='unique')
+        related_object_inst3 = OneRelatedObject.objects.create()
+
+        m2m_inst.related_objects.add(related_object_inst1, related_object_inst2, related_object_inst3)
+
+        assert_equal(m2m_inst.related_objects.get_object_or_none(SecondRelatedObject), related_object_inst2)
+
+        with assert_raises(MultipleObjectsReturned):
+            m2m_inst.related_objects.get_object_or_none(OneRelatedObject)
+
+        assert_equal(
+            m2m_inst.related_objects.get_object_or_none(OneRelatedObject, related_object_inst3.pk), related_object_inst3
         )
