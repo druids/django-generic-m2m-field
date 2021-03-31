@@ -10,6 +10,7 @@ from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
 from chamber.models import SmartModel, SmartQuerySet
+from chamber.shortcuts import get_object_or_none
 
 
 def camel_to_snake(name):
@@ -57,6 +58,13 @@ class RelatedObjectQuerySet(SmartQuerySet):
         ).annotate(
             object_pk=Cast('object_id', output_field=pk_field)
         )
+
+    def get_object_or_none(self, model_class, pk=None):
+        qs = self.filter(object_ct_id=ContentType.objects.get_for_model(model_class).pk)
+        if pk is not None:
+            qs = qs.filter(object_id=str(pk))
+        related_object = get_object_or_none(qs)
+        return related_object.object if related_object else None
 
     def get_objects(self, model_class):
         return model_class.objects.filter(pk__in=self.annotate_object_pks(model_class).values('object_pk'))

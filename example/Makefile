@@ -40,7 +40,7 @@ pip:
 	$(PYTHON_BIN)/pip install -r requirements.txt
 
 initvirtualenv:
-	virtualenv -p $(PYTHON) --no-site-packages $(VIRTUAL_ENV)
+	virtualenv -p $(PYTHON) $(VIRTUAL_ENV)
 
 bootstrap: initvirtualenv pip
 
