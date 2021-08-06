@@ -47,7 +47,7 @@ from django.contrib.auth.models import User
 
 user1, user2 = User.objects.all()
 
-email_message = EmailMessage.objects.first())
+email_message = EmailMessage.objects.first()
 
 # Add user1 and user2
 email_message.related_objects.add(user1)
@@ -88,4 +88,52 @@ class EmailMessage(models.Model):
     subject = models.TextField(verbose_name=_('subject'), blank=False, null=False)
     related_objects = MultipleDBGenericManyToManyField()
 
+```
+
+Named generic m2m field DB
+--------------------------
+
+Sometimes you want to name your relations. You can use ``NamedGenericManyToManyField`` for this purpose.
+
+```python
+from django.db import models
+from generic_m2m_field.models import NamedGenericManyToManyField
+
+
+class EmailMessage(models.Model):
+
+    recipient = models.EmailField(verbose_name=_('recipient'), blank=False, null=False)
+    sender = models.EmailField(verbose_name=_('sender'), blank=False, null=False)
+    subject = models.TextField(verbose_name=_('subject'), blank=False, null=False)
+    related_objects = NamedGenericManyToManyField()
+
+```
+
+Now you can set relations with names:
+
+
+```python
+from django.contrib.auth.models import User
+
+user1, user2 = User.objects.all()
+
+email_message = EmailMessage.objects.first()
+
+# Add user1 and user2
+email_message.related_objects.add(author=user1)
+email_message.related_objects.add(watcher=user2)
+
+# Read author and watcher
+email_message.related_objects.author  # return user1
+email_message.related_objects.watcher  # return user2
+email_message.related_objects.to_attr_dict()  # return AttrDict(author=user1, watcher=user2) 
+
+# Remove watcher
+email_message.related_objects.remove(['watcher'])
+
+# Clear all relations
+email_message.related_objects.clear()
+
+# Set relations
+email_message.related_objects.set(author=user2)
 ```

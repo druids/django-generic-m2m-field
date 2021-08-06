@@ -2,6 +2,8 @@ import re
 
 from types import MethodType
 
+from attrdict import AttrDict
+
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -32,11 +34,7 @@ def clear_objs(self):
 
 def set_objs(self, *objects):
     self.clear()
-    for obj in objects:
-        self.create(
-            object_ct_id=ContentType.objects.get_for_model(obj).pk,
-            object_id=obj.pk
-        )
+    self.add(*objects)
 
 
 def remove_objs(self, *objects):
@@ -45,6 +43,26 @@ def remove_objs(self, *objects):
             object_ct_id=ContentType.objects.get_for_model(obj).pk,
             object_id=obj.pk
         ).delete()
+
+
+def add_named_objs(self, **objects):
+    for name, obj in objects.items():
+        self.update_or_create(
+            name=name,
+            defaults=dict(
+                object_ct_id=ContentType.objects.get_for_model(obj).pk,
+                object_id=obj.pk
+            )
+        )
+
+
+def set_named_objs(self, **objects):
+    self.clear()
+    self.add(**objects)
+
+
+def remove_named_objs(self, *names):
+    self.filter(name__in=names).delete()
 
 
 class RelatedObjectQuerySet(SmartQuerySet):
@@ -82,18 +100,46 @@ class RelatedObjectQuerySet(SmartQuerySet):
         return super()._filter_or_exclude(negate, *args, **kwargs)
 
 
-class GenericManyToManyManager(models.Manager):
+class BaseGenericManager(models.Manager):
+
+    def _is_related_manager(self):
+        return self.__class__.__module__ == 'django.db.models.fields.related_descriptors'
+
+
+class GenericManyToManyManager(BaseGenericManager):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if self._is_related_manger():
+        if self._is_related_manager():
             self.add = MethodType(add_objs, self)
             self.set = MethodType(set_objs, self)
             self.clear = MethodType(clear_objs, self)
             self.remove = MethodType(remove_objs, self)
 
-    def _is_related_manger(self):
-        return self.__class__.__module__ == 'django.db.models.fields.related_descriptors'
+
+class NamedGenericManyToManyManager(BaseGenericManager):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self._is_related_manager():
+            self.add = MethodType(add_named_objs, self)
+            self.set = MethodType(set_named_objs, self)
+            self.clear = MethodType(clear_objs, self)
+            self.remove = MethodType(remove_named_objs, self)
+
+    def __getattr__(self, attr):
+        if 'instance' in self.__dict__:
+            related_object = self.filter(name=attr).first()
+            if related_object:
+                return related_object.object
+        raise AttributeError
+
+    def to_attr_dict(self):
+        if 'instance' in self.__dict__:
+            return AttrDict(
+                (related_object.name, related_object.object)
+                for related_object in self.all()
+            )
 
 
 class GenericManyToMany(SmartModel):
@@ -154,6 +200,23 @@ class MultipleDBGenericManyToMany(SmartModel):
         return self.object_ct.model_class().objects.get(pk=self.object_id)
 
 
+class NamedGenericManyToMany(GenericManyToMany):
+
+    name = models.CharField(
+        verbose_name=_('name'),
+        null=False,
+        blank=False,
+        max_length=200,
+        db_index=True
+    )
+
+    objects = NamedGenericManyToManyManager.from_queryset(RelatedObjectQuerySet)()
+
+    class Meta:
+        abstract = True
+        unique_together = ('name',)
+
+
 def create_generic_many_to_many_intermediary_model(field, klass, parent_through):
     from_name = camel_to_snake(klass.__name__).lower()
 
@@ -212,3 +275,8 @@ class GenericManyToManyField:
 class MultipleDBGenericManyToManyField(GenericManyToManyField):
 
     parent_through = MultipleDBGenericManyToMany
+
+
+class NamedGenericManyToManyField(GenericManyToManyField):
+
+    parent_through = NamedGenericManyToMany
