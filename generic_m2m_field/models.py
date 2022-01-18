@@ -84,6 +84,10 @@ class RelatedObjectQuerySet(SmartQuerySet):
         related_object = get_object_or_none(qs)
         return related_object.object if related_object else None
 
+    def get_by_name(self, name):
+        related_object = self.filter(name=name).first()
+        return related_object.object if related_object else None
+
     def get_objects(self, model_class):
         return model_class.objects.filter(pk__in=self.annotate_object_pks(model_class).values('object_pk'))
 
