@@ -20,11 +20,19 @@ def camel_to_snake(name):
   return re.sub('([a-z0-9])([A-Z])', r'\1_\2', name).lower()
 
 
+def _get_object_ct_and_pk(obj):
+    if isinstance(obj, (list, tuple)) and len(obj) == 2:
+        return obj
+    else:
+        return ContentType.objects.get_for_model(obj).pk, obj.pk
+
+
 def add_objs(self, *objects):
     for obj in objects:
+        object_ct_id, object_id = _get_object_ct_and_pk(obj)
         self.get_or_create(
-            object_ct_id=ContentType.objects.get_for_model(obj).pk,
-            object_id=obj.pk
+            object_ct_id=object_ct_id,
+            object_id=object_id
         )
 
 
@@ -39,19 +47,21 @@ def set_objs(self, *objects):
 
 def remove_objs(self, *objects):
     for obj in objects:
+        object_ct_id, object_id = _get_object_ct_and_pk(obj)
         self.filter(
-            object_ct_id=ContentType.objects.get_for_model(obj).pk,
-            object_id=obj.pk
+            object_ct_id=object_ct_id,
+            object_id=object_id
         ).delete()
 
 
 def add_named_objs(self, **objects):
     for name, obj in objects.items():
+        object_ct_id, object_id = _get_object_ct_and_pk(obj)
         self.update_or_create(
             name=name,
             defaults=dict(
-                object_ct_id=ContentType.objects.get_for_model(obj).pk,
-                object_id=obj.pk
+                object_ct_id=object_ct_id,
+                object_id=object_id
             )
         )
 
