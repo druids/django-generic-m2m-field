@@ -1,0 +1,46 @@
+name: Django CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 4
+      matrix:
+        include:
+          - python-version: 3.7
+            django-version: Django==3.1
+
+          - python-version: 3.8
+            django-version: Django==3.1
+
+          - python-version: 3.7
+            django-version: Django==3.2
+
+          - python-version: 3.8
+            django-version: Django==3.2
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install ${{ matrix.django-version }}
+        pip install -r example/requirements.txt
+        pip install -e .
+    - name: Flake
+      run: |
+        flake8 --config .config/flake8 --ignore E1,E23,W503 generic_m2m_field
+    - name: Run Tests
+      run: |
+        cd example
+        coverage run --omit */site-packages/*,*/migrations/*,*/lib/* manage.py test --settings=settings.settings -v 2

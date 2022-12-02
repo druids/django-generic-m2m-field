@@ -104,14 +104,21 @@ class RelatedObjectQuerySet(SmartQuerySet):
     def get_object_pks(self, model_class):
         return self.annotate_object_pks(model_class).values_list('object_pk', flat=True)
 
-    def _filter_or_exclude(self, negate, *args, **kwargs):
+    def _filter_by_object(self, kwargs):
         if 'object' in kwargs:
             object = kwargs.pop('object')
             kwargs.update(dict(
                 object_id=object.pk,
                 object_ct_id=ContentType.objects.get_for_model(object).pk,
             ))
-        return super()._filter_or_exclude(negate, *args, **kwargs)
+
+    def filter(self, *args, **kwargs):
+        self._filter_by_object(kwargs)
+        return super().filter(*args, **kwargs)
+
+    def exclude(self, *args, **kwargs):
+        self._filter_by_object(kwargs)
+        return super().exclude(*args, **kwargs)
 
 
 class BaseGenericManager(models.Manager):

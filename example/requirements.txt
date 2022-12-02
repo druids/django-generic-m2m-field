@@ -1,4 +1,4 @@
-Django>=2.2.9,<3.2
+Django<=3.2
 django-germanium==2.1.2
 coverage==5.5
--e ../
+flake8
