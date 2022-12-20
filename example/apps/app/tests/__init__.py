@@ -1,5 +1,3 @@
-from attrdict import AttrDict
-
 from django.core.exceptions import MultipleObjectsReturned
 
 from germanium.test_cases.default import GermaniumTestCase
@@ -304,7 +302,7 @@ class GenericManyToManyTestCase(GermaniumTestCase):
             related_object1=related_object_inst1,
             related_object2=related_object_inst2
         )
-        assert_equal(m2m_inst.related_objects.to_attr_dict(), AttrDict(
+        assert_equal(m2m_inst.related_objects.to_dict(), dict(
             related_object1=related_object_inst1,
             related_object2=related_object_inst2
         ))

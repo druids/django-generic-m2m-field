@@ -28,8 +28,7 @@ setup(
     ],
     install_requires=[
         'django>=2.2.9, <4.0',
-        'django-chamber>=0.5.3',
-        'attrdict==2.0.1'
+        'django-chamber>=0.6.16'
     ],
     zip_safe=False
 )

@@ -2,8 +2,6 @@ import re
 
 from types import MethodType
 
-from attrdict import AttrDict
-
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -155,12 +153,13 @@ class NamedGenericManyToManyManager(BaseGenericManager):
                 return related_object.object
         raise AttributeError
 
-    def to_attr_dict(self):
+    def to_dict(self):
         if 'instance' in self.__dict__:
-            return AttrDict(
-                (related_object.name, related_object.object)
+            return {
+                related_object.name: related_object.object
                 for related_object in self.all()
-            )
+            }
+        raise AttributeError
 
 
 class GenericManyToMany(SmartModel):
