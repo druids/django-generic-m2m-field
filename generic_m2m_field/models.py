@@ -2,8 +2,6 @@ import re
 
 from types import MethodType
 
-from attrdict import AttrDict
-
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
@@ -104,14 +102,21 @@ class RelatedObjectQuerySet(SmartQuerySet):
     def get_object_pks(self, model_class):
         return self.annotate_object_pks(model_class).values_list('object_pk', flat=True)
 
-    def _filter_or_exclude(self, negate, *args, **kwargs):
+    def _filter_by_object(self, kwargs):
         if 'object' in kwargs:
             object = kwargs.pop('object')
             kwargs.update(dict(
                 object_id=object.pk,
                 object_ct_id=ContentType.objects.get_for_model(object).pk,
             ))
-        return super()._filter_or_exclude(negate, *args, **kwargs)
+
+    def filter(self, *args, **kwargs):
+        self._filter_by_object(kwargs)
+        return super().filter(*args, **kwargs)
+
+    def exclude(self, *args, **kwargs):
+        self._filter_by_object(kwargs)
+        return super().exclude(*args, **kwargs)
 
 
 class BaseGenericManager(models.Manager):
@@ -148,12 +153,13 @@ class NamedGenericManyToManyManager(BaseGenericManager):
                 return related_object.object
         raise AttributeError
 
-    def to_attr_dict(self):
+    def to_dict(self):
         if 'instance' in self.__dict__:
-            return AttrDict(
-                (related_object.name, related_object.object)
+            return {
+                related_object.name: related_object.object
                 for related_object in self.all()
-            )
+            }
+        raise AttributeError
 
 
 class GenericManyToMany(SmartModel):

@@ -126,7 +126,7 @@ email_message.related_objects.add(watcher=user2)
 # Read author and watcher
 email_message.related_objects.author  # return user1
 email_message.related_objects.watcher  # return user2
-email_message.related_objects.to_attr_dict()  # return AttrDict(author=user1, watcher=user2) 
+email_message.related_objects.to_dict()  # return dict(author=user1, watcher=user2) 
 
 # Remove watcher
 email_message.related_objects.remove(['watcher'])

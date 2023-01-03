@@ -27,9 +27,8 @@ setup(
         'Topic :: Internet :: WWW/HTTP :: Site Management',
     ],
     install_requires=[
-        'django>=2.2.9,<3.2',
-        'django-chamber>=0.5.3',
-        'attrdict==2.0.1'
+        'django>=2.2.9, <4.0',
+        'django-chamber>=0.6.16'
     ],
     zip_safe=False
 )
